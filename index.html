@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather & Climate Simulations</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #0b1015;
+            font-family: 'Segoe UI', sans-serif;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            background: radial-gradient(circle at 50% 0%, #1a2a3a 0%, #0b1015 100%);
+        }
+
+        header {
+            text-align: center;
+            margin-top: 60px;
+            margin-bottom: 40px;
+            z-index: 2;
+        }
+
+        h1 {
+            font-size: 48px;
+            font-weight: 300;
+            letter-spacing: 4px;
+            margin: 0;
+            background: linear-gradient(90deg, #fff, #88ccff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p.subtitle {
+            color: #88aadd;
+            font-size: 18px;
+            margin-top: 10px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .container {
+            display: flex;
+            gap: 40px;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 1200px;
+            padding: 20px;
+            z-index: 2;
+        }
+
+        .card {
+            width: 340px;
+            height: 420px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            box-sizing: border-box;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            text-decoration: none;
+        }
+
+        .card:hover {
+            transform: translateY(-10px);
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(77, 184, 255, 0.5);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .card-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        .card h2 {
+            margin: 0 0 10px 0;
+            font-size: 24px;
+            color: #fff;
+        }
+
+        .card p {
+            color: #aaa;
+            font-size: 14px;
+            line-height: 1.6;
+            flex-grow: 1;
+        }
+
+        .card-footer {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding-top: 20px;
+        }
+
+        .tag {
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            background: rgba(77, 184, 255, 0.2);
+            color: #4db8ff;
+        }
+
+        .arrow {
+            color: #fff;
+            font-size: 20px;
+            transition: transform 0.3s;
+        }
+
+        .card:hover .arrow {
+            transform: translateX(5px);
+            color: #4db8ff;
+        }
+
+        /* Background Elements */
+        .bg-circle {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.4;
+            z-index: 1;
+        }
+
+        .c1 {
+            width: 400px;
+            height: 400px;
+            background: #0044ff;
+            top: -100px;
+            left: -100px;
+        }
+
+        .c2 {
+            width: 300px;
+            height: 300px;
+            background: #00ffcc;
+            bottom: 0;
+            right: -50px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="bg-circle c1"></div>
+    <div class="bg-circle c2"></div>
+
+    <header>
+        <h1>Weather Lab</h1>
+        <p class="subtitle">Interactive 3D Climate Simulations</p>
+    </header>
+
+    <div class="container">
+        <!-- Card 1 -->
+        <a href="cloud.html" class="card">
+            <div class="card-icon">☁️</div>
+            <h2>Cloud Simulator</h2>
+            <p>Explore the genealogy of clouds. Visualize wind fields, turbulence, and cloud evolution from vapor to
+                storm systems. Fly a plane through the dynamic atmosphere.</p>
+            <div class="card-footer">
+                <span class="tag">Atmosphere</span>
+                <span class="arrow">→</span>
+            </div>
+        </a>
+
+        <!-- Card 2 -->
+        <a href="ocean_climate.html" class="card">
+            <div class="card-icon">🌊</div>
+            <h2>Ocean Climate</h2>
+            <p>A comprehensive simulation of continental margin climate. Observe the water cycle, day/night transitions,
+                land-sea breezes, and upwelling phenomena.</p>
+            <div class="card-footer">
+                <span class="tag">Oceanography</span>
+                <span class="arrow">→</span>
+            </div>
+        </a>
+    </div>
+
+</body>
+
+</html>

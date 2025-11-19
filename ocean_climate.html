@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>海洋气候系统 - 大陆边缘模拟</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #1e3c5e;
+            font-family: 'Microsoft YaHei', 'PingFang SC', 'Segoe UI', sans-serif;
+        }
+
+        /* UI Layer */
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 30px;
+            box-sizing: border-box;
+        }
+
+        /* Header */
+        #header {
+            text-align: center;
+            text-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
+            z-index: 2;
+        }
+
+        h1 {
+            margin: 0;
+            color: #fff;
+            font-size: 36px;
+            letter-spacing: 4px;
+            font-weight: 300;
+        }
+
+        #sub-text {
+            color: #4db8ff;
+            font-size: 16px;
+            margin-top: 5px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        #desc-text {
+            color: #ccc;
+            font-size: 14px;
+            margin-top: 15px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 15px;
+            border-radius: 8px;
+            line-height: 1.6;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Right Monitor Panel */
+        #monitor-panel {
+            position: absolute;
+            top: 50%;
+            right: 30px;
+            transform: translateY(-50%);
+            width: 260px;
+            background: rgba(15, 25, 40, 0.85);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(77, 184, 255, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            color: white;
+            pointer-events: auto;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .monitor-title {
+            font-size: 12px;
+            color: #88aadd;
+            text-transform: uppercase;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+        }
+
+        .gauge-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+
+        .gauge-label {
+            font-size: 13px;
+            color: #ddd;
+        }
+
+        .gauge-val {
+            font-weight: bold;
+            font-size: 14px;
+            color: #4db8ff;
+        }
+
+        .bar-container {
+            height: 4px;
+            background: #333;
+            border-radius: 2px;
+            width: 100%;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4db8ff, #00ffff);
+            width: 0%;
+            transition: width 0.5s;
+        }
+
+        /* Bottom Control Panel */
+        #control-panel {
+            pointer-events: auto;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .scenario-btn {
+            background: rgba(30, 40, 60, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-left: 4px solid #4db8ff;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            min-width: 180px;
+        }
+
+        .scenario-btn:hover {
+            background: #4db8ff;
+            color: #001f3f;
+            transform: translateY(-5px);
+        }
+
+        .scenario-btn .sub {
+            font-size: 11px;
+            opacity: 0.7;
+            display: block;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }
+
+        .scenario-btn .title {
+            font-size: 16px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="ui-layer">
+        <div id="header">
+            <h1>海洋气候系统</h1>
+            <div id="sub-text">大陆边缘模拟</div>
+            <div id="desc-text">系统初始化中...</div>
+        </div>
+
+        <div id="monitor-panel">
+            <div class="monitor-title">📊 气候数据监测</div>
+
+            <!-- Evaporation -->
+            <div>
+                <div class="gauge-row">
+                    <span class="gauge-label">💧 蒸发量 (Evaporation)</span>
+                    <span class="gauge-val" id="val-evap">0%</span>
+                </div>
+                <div class="bar-container">
+                    <div class="bar-fill" id="bar-evap"></div>
+                </div>
+            </div>
+            <br>
+            <!-- Wind -->
+            <div>
+                <div class="gauge-row">
+                    <span class="gauge-label">💨 风速 (Wind Speed)</span>
+                    <span class="gauge-val" id="val-wind">0 km/h</span>
+                </div>
+                <div class="bar-container">
+                    <div class="bar-fill" id="bar-wind" style="background: linear-gradient(90deg, #88ccff, #ffffff);">
+                    </div>
+                </div>
+            </div>
+            <br>
+            <!-- Rain -->
+            <div>
+                <div class="gauge-row">
+                    <span class="gauge-label">🌧️ 降水量 (Precipitation)</span>
+                    <span class="gauge-val" id="val-rain">0 mm/h</span>
+                </div>
+                <div class="bar-container">
+                    <div class="bar-fill" id="bar-rain" style="background: linear-gradient(90deg, #4444ff, #8888ff);">
+                    </div>
+                </div>
+            </div>
+            <br>
+            <!-- Upwelling -->
+            <div>
+                <div class="gauge-row">
+                    <span class="gauge-label">🌊 上升流 (Upwelling)</span>
+                    <span class="gauge-val" id="val-upwell">弱</span>
+                </div>
+                <div class="bar-container">
+                    <div class="bar-fill" id="bar-upwell" style="background: linear-gradient(90deg, #004444, #00ffff);">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="control-panel">
+            <!-- Buttons injected by JS -->
+        </div>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+                "tween": "https://unpkg.com/@tweenjs/tween.js@23.1.1/dist/tween.esm.js"
+            }
+        }
+    </script>
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import TWEEN from 'tween';
+
+        // --- Configuration & State ---
+        const SCENARIOS = {
+            'normal': {
+                title: "正常气候",
+                sub: "标准循环",
+                desc: "蒸发与降水处于平衡状态。信风将湿润空气输送至内陆，维持适度的植被生长。",
+                params: { evap: 1.0, wind: 1.0, rain: 1.0, upwell: 1.0 },
+                color: 0x87CEEB
+            },
+            'storm': {
+                title: "沿海风暴",
+                sub: "高能状态",
+                desc: "强烈的蒸发和狂风导致沿海及山区出现暴雨。存在洪水风险。",
+                params: { evap: 2.5, wind: 3.0, rain: 4.0, upwell: 1.5 },
+                color: 0x2c3e50
+            },
+            'drought': {
+                title: "干旱 / 高压",
+                sub: "干燥条件",
+                desc: "风力微弱且蒸发量低，导致降水稀缺。土地逐渐干涸。",
+                params: { evap: 0.2, wind: 0.3, rain: 0.0, upwell: 0.5 },
+                color: 0x87CEEB
+            },
+            'upwelling': {
+                title: "强上升流",
+                sub: "营养丰富",
+                desc: "强劲的离岸风将表层海水推开，允许寒冷、富含营养的深层海水上涌。有利于渔场形成。",
+                params: { evap: 0.8, wind: 1.5, rain: 0.5, upwell: 3.0 },
+                color: 0x5F9EA0
+            }
+        };
+
+        let currentParams = { evap: 0, wind: 0, rain: 0, upwell: 0 };
+        let targetParams = { ...SCENARIOS['normal'].params };
+
+        // Time State (0-24 hours)
+        let timeOfDay = 12; // Noon start
+        let isAutoTime = true;
+
+        // --- Scene Setup ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87CEEB);
+        scene.fog = new THREE.Fog(0x87CEEB, 50, 200);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 40, 120);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.body.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.target.set(0, 5, 0);
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 0.5;
+
+        // Lights
+        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
+        hemiLight.position.set(0, 200, 0);
+        scene.add(hemiLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+        dirLight.position.set(50, 100, 50);
+        dirLight.castShadow = true;
+        scene.add(dirLight);
+
+        // Sun Helper (Visual Sphere)
+        const sunGeo = new THREE.SphereGeometry(5, 16, 16);
+        const sunMat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+        const sunMesh = new THREE.Mesh(sunGeo, sunMat);
+        scene.add(sunMesh);
+
+        // --- Terrain (Same as before) ---
+        const width = 120;
+        const depth = 80;
+        const segments = 128;
+        const geometry = new THREE.PlaneGeometry(width, depth, segments, segments);
+        const positions = geometry.attributes.position;
+
+        for (let i = 0; i < positions.count; i++) {
+            const x = positions.getX(i);
+            const y = positions.getY(i);
+            let h = 0;
+            if (x < -25) h = -15;
+            else if (x < 5) h = -15 + ((x + 25) / 30) * 15;
+            else {
+                const t = (x - 5) / 55;
+                h = t * 25 + Math.sin(x * 0.2) * 3 + Math.cos(y * 0.3) * 2;
+                if (h < 0) h = 0;
+            }
+            h += Math.random() * 0.5;
+            positions.setZ(i, h);
+        }
+        geometry.computeVertexNormals();
+
+        const colors = [];
+        for (let i = 0; i < positions.count; i++) {
+            const h = positions.getZ(i);
+            if (h < -2) colors.push(0.05, 0.1, 0.3);
+            else if (h < 1) colors.push(0.76, 0.7, 0.5);
+            else if (h < 15) colors.push(0.1, 0.5, 0.1);
+            else colors.push(0.5, 0.5, 0.5);
+        }
+        geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+        const terrainMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, flatShading: true });
+        const terrain = new THREE.Mesh(geometry, terrainMat);
+        terrain.rotation.x = -Math.PI / 2;
+        terrain.receiveShadow = true;
+        scene.add(terrain);
+
+        // Ocean
+        const waterGeo = new THREE.PlaneGeometry(120, 80);
+        const waterMat = new THREE.MeshPhysicalMaterial({
+            color: 0x0077be, transparent: true, opacity: 0.6, roughness: 0.1, metalness: 0.1, side: THREE.DoubleSide
+        });
+        const water = new THREE.Mesh(waterGeo, waterMat);
+        water.rotation.x = -Math.PI / 2;
+        scene.add(water);
+
+        // --- Particle Systems ---
+
+        // Evaporation
+        const evapCount = 1000;
+        const evapGeo = new THREE.BufferGeometry();
+        const evapPos = new Float32Array(evapCount * 3);
+        for (let i = 0; i < evapCount; i++) {
+            evapPos[i * 3] = (Math.random() - 0.5) * 50 - 30;
+            evapPos[i * 3 + 1] = Math.random() * 8;
+            evapPos[i * 3 + 2] = (Math.random() - 0.5) * 80;
+        }
+        evapGeo.setAttribute('position', new THREE.BufferAttribute(evapPos, 3));
+        const evapMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.4, transparent: true, opacity: 0.3 });
+        const evapSystem = new THREE.Points(evapGeo, evapMat);
+        scene.add(evapSystem);
+
+        // Clouds
+        const cloudCount = 600;
+        const cloudGeo = new THREE.BufferGeometry();
+        const cloudPos = new Float32Array(cloudCount * 3);
+        for (let i = 0; i < cloudCount; i++) {
+            cloudPos[i * 3] = (Math.random() - 0.5) * 100;
+            cloudPos[i * 3 + 1] = 20 + Math.random() * 5;
+            cloudPos[i * 3 + 2] = (Math.random() - 0.5) * 80;
+        }
+        cloudGeo.setAttribute('position', new THREE.BufferAttribute(cloudPos, 3));
+        const cloudMat = new THREE.PointsMaterial({ color: 0xffffff, size: 2.5, transparent: true, opacity: 0.5 });
+        const cloudSystem = new THREE.Points(cloudGeo, cloudMat);
+        scene.add(cloudSystem);
+
+        // Rain
+        const rainCount = 2000;
+        const rainGeo = new THREE.BufferGeometry();
+        const rainPos = new Float32Array(rainCount * 3);
+        for (let i = 0; i < rainCount; i++) {
+            rainPos[i * 3] = 25 + Math.random() * 30;
+            rainPos[i * 3 + 1] = Math.random() * 25;
+            rainPos[i * 3 + 2] = (Math.random() - 0.5) * 80;
+        }
+        rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
+        const rainMat = new THREE.PointsMaterial({ color: 0xaaaaaa, size: 0.15, transparent: true, opacity: 0.7 });
+        const rainSystem = new THREE.Points(rainGeo, rainMat);
+        scene.add(rainSystem);
+
+        // Upwelling
+        const upwellCount = 800;
+        const upwellGeo = new THREE.BufferGeometry();
+        const upwellPos = new Float32Array(upwellCount * 3);
+        for (let i = 0; i < upwellCount; i++) {
+            upwellPos[i * 3] = -50 + Math.random() * 30;
+            upwellPos[i * 3 + 1] = -15 + Math.random() * 10;
+            upwellPos[i * 3 + 2] = (Math.random() - 0.5) * 80;
+        }
+        upwellGeo.setAttribute('position', new THREE.BufferAttribute(upwellPos, 3));
+        const upwellMat = new THREE.PointsMaterial({ color: 0x00ffff, size: 0.3, transparent: true, opacity: 0.5 });
+        const upwellSystem = new THREE.Points(upwellGeo, upwellMat);
+        scene.add(upwellSystem);
+
+        // Wind Arrows
+        const windGroup = new THREE.Group();
+        for (let i = 0; i < 8; i++) {
+            const arrow = new THREE.ArrowHelper(
+                new THREE.Vector3(1, 0, 0),
+                new THREE.Vector3(-50 + i * 15, 15 + Math.sin(i) * 3, (Math.random() - 0.5) * 40),
+                8, 0xffff00, 2, 1
+            );
+            windGroup.add(arrow);
+        }
+        scene.add(windGroup);
+
+        // --- Logic & Interaction ---
+
+        function setScenario(key) {
+            const data = SCENARIOS[key];
+
+            // Update UI Text
+            document.getElementById('sub-text').innerText = data.sub;
+            document.getElementById('desc-text').innerText = data.desc;
+
+            // Target Params
+            targetParams = data.params;
+
+            // Tween Background Color (Only if Day, otherwise handled by time loop)
+            // We'll let the time loop handle the base color, but modify intensity/hue based on scenario
+        }
+
+        function initUI() {
+            const panel = document.getElementById('control-panel');
+            Object.keys(SCENARIOS).forEach(key => {
+                const btn = document.createElement('div');
+                btn.className = 'scenario-btn';
+                btn.innerHTML = `<span class="sub">${SCENARIOS[key].sub}</span><span class="title">${SCENARIOS[key].title}</span>`;
+                btn.onclick = () => setScenario(key);
+                panel.appendChild(btn);
+            });
+
+            // Time Control
+            const monitor = document.getElementById('monitor-panel');
+            const timeDiv = document.createElement('div');
+            timeDiv.style.marginTop = '20px';
+            timeDiv.style.borderTop = '1px solid rgba(255,255,255,0.1)';
+            timeDiv.style.paddingTop = '15px';
+            timeDiv.innerHTML = `
+                <div class="gauge-row">
+                    <span class="gauge-label">🕒 时间 (Time)</span>
+                    <span class="gauge-val" id="val-time">12:00</span>
+                </div>
+                <input type="range" id="time-slider" min="0" max="24" step="0.1" value="12" style="width:100%">
+                <div style="margin-top:5px; font-size:11px; color:#aaa; display:flex; justify-content:space-between;">
+                    <span>午夜</span><span>正午</span><span>午夜</span>
+                </div>
+                <div style="margin-top:10px;">
+                    <label style="font-size:12px; color:#ddd; cursor:pointer;">
+                        <input type="checkbox" id="auto-time" checked> 自动循环 (Auto-Cycle)
+                    </label>
+                </div>
+            `;
+            monitor.appendChild(timeDiv);
+
+            document.getElementById('time-slider').addEventListener('input', (e) => {
+                timeOfDay = parseFloat(e.target.value);
+                isAutoTime = false;
+                document.getElementById('auto-time').checked = false;
+            });
+
+            document.getElementById('auto-time').addEventListener('change', (e) => {
+                isAutoTime = e.target.checked;
+            });
+        }
+
+        function updateMonitor() {
+            // Lerp current params
+            currentParams.evap += (targetParams.evap - currentParams.evap) * 0.02;
+            currentParams.wind += (targetParams.wind - currentParams.wind) * 0.02;
+            currentParams.rain += (targetParams.rain - currentParams.rain) * 0.02;
+            currentParams.upwell += (targetParams.upwell - currentParams.upwell) * 0.02;
+
+            // Update Bars
+            document.getElementById('bar-evap').style.width = (currentParams.evap / 3 * 100) + '%';
+            document.getElementById('val-evap').innerText = Math.round(currentParams.evap * 30) + '%';
+
+            // Wind display needs to handle direction
+            const windDisplay = Math.abs(currentParams.wind);
+            const windDir = currentParams.wind >= 0 ? "Sea Breeze ➡" : "⬅ Land Breeze";
+            document.getElementById('bar-wind').style.width = (windDisplay / 4 * 100) + '%';
+            document.getElementById('val-wind').innerText = (windDisplay * 20).toFixed(1) + ' km/h';
+            // Add direction hint
+            if (!document.getElementById('wind-dir-hint')) {
+                const hint = document.createElement('div');
+                hint.id = 'wind-dir-hint';
+                hint.style.fontSize = '10px'; hint.style.color = '#aaa'; hint.style.textAlign = 'right';
+                document.getElementById('bar-wind').parentNode.appendChild(hint);
+            }
+            document.getElementById('wind-dir-hint').innerText = windDir;
+
+
+            document.getElementById('bar-rain').style.width = (currentParams.rain / 5 * 100) + '%';
+            document.getElementById('val-rain').innerText = (currentParams.rain * 10).toFixed(1) + ' mm/h';
+
+            document.getElementById('bar-upwell').style.width = (currentParams.upwell / 4 * 100) + '%';
+            document.getElementById('val-upwell').innerText = currentParams.upwell > 2 ? "强 (Strong)" : (currentParams.upwell > 0.8 ? "中 (Moderate)" : "弱 (Weak)");
+
+            // Update Time UI
+            const h = Math.floor(timeOfDay);
+            const m = Math.floor((timeOfDay - h) * 60);
+            const timeStr = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+            document.getElementById('val-time').innerText = timeStr;
+            if (isAutoTime) document.getElementById('time-slider').value = timeOfDay;
+        }
+
+        function updateDayNightCycle() {
+            // 0 = Midnight, 6 = Sunrise, 12 = Noon, 18 = Sunset, 24 = Midnight
+
+            // 1. Sun Position
+            const angle = (timeOfDay - 6) / 24 * Math.PI * 2;
+            const sunX = Math.cos(angle) * 100;
+            const sunY = Math.sin(angle) * 100;
+
+            dirLight.position.set(sunX, sunY, 50);
+            sunMesh.position.set(sunX, sunY, 50);
+
+            // 2. Sky Color
+            let skyColor = new THREE.Color(0x000000);
+            let lightIntensity = 0;
+
+            if (timeOfDay >= 5 && timeOfDay < 7) { // Sunrise
+                const t = (timeOfDay - 5) / 2;
+                skyColor.setHSL(0.05, 0.8, t * 0.5);
+                lightIntensity = t;
+            } else if (timeOfDay >= 7 && timeOfDay < 17) { // Day
+                skyColor.setHex(0x87CEEB);
+                lightIntensity = 1;
+            } else if (timeOfDay >= 17 && timeOfDay < 19) { // Sunset
+                const t = 1 - (timeOfDay - 17) / 2;
+                skyColor.setHSL(0.02, 0.9, t * 0.5);
+                lightIntensity = t;
+            } else { // Night
+                skyColor.setHex(0x0b1026);
+                lightIntensity = 0.1;
+            }
+
+            scene.background.lerp(skyColor, 0.1);
+            scene.fog.color.lerp(skyColor, 0.1);
+            dirLight.intensity = lightIntensity;
+            hemiLight.intensity = 0.1 + lightIntensity * 0.5;
+
+            // 3. Temperature & Breeze Physics
+            // Ocean Temp is relatively stable. Land Temp fluctuates wildly.
+            const oceanTemp = 20; // Constant 20C
+            let landTemp = 20;
+
+            if (timeOfDay > 6 && timeOfDay < 18) {
+                // Day: Land heats up to 30C
+                const t = Math.sin(((timeOfDay - 6) / 12) * Math.PI);
+                landTemp = 20 + t * 10;
+            } else {
+                // Night: Land cools down to 10C
+                let t = 0;
+                if (timeOfDay >= 18) t = Math.sin(((timeOfDay - 18) / 12) * Math.PI); // 0 to 1 (at 24)
+                else t = Math.sin(((timeOfDay + 6) / 12) * Math.PI);
+                // Simple cooling curve
+                landTemp = 20 - 10 * (1 - Math.abs(Math.cos((timeOfDay / 24) * Math.PI)));
+                // Actually let's just use a sine wave for simplicity
+                landTemp = 20 + Math.sin(((timeOfDay - 9) / 24) * Math.PI * 2) * 10;
+            }
+
+            // Breeze depends on Temp Difference (Land - Ocean)
+            // Positive Diff (Hot Land) -> Sea Breeze (Positive Wind)
+            // Negative Diff (Cold Land) -> Land Breeze (Negative Wind)
+            const tempDiff = landTemp - oceanTemp;
+            const breezeFactor = tempDiff * 0.15; // Scale factor
+
+            return { breezeFactor, landTemp, oceanTemp };
+        }
+
+        // Animation Loop
+        function animate() {
+            requestAnimationFrame(animate);
+            TWEEN.update();
+            controls.update();
+
+            if (isAutoTime) {
+                timeOfDay += 0.02;
+                if (timeOfDay >= 24) timeOfDay = 0;
+            }
+
+            const { breezeFactor, landTemp, oceanTemp } = updateDayNightCycle();
+
+            // Update Temp UI if exists, else create it
+            if (!document.getElementById('temp-monitor')) {
+                const monitor = document.getElementById('monitor-panel');
+                const div = document.createElement('div');
+                div.id = 'temp-monitor';
+                div.style.marginTop = '10px';
+                div.style.fontSize = '12px';
+                div.style.color = '#aaa';
+                div.style.display = 'flex';
+                div.style.justifyContent = 'space-between';
+                div.innerHTML = `<span id="t-land">陆地: --°C</span><span id="t-ocean">海洋: --°C</span>`;
+                monitor.insertBefore(div, document.getElementById('bar-evap').parentNode.parentNode); // Insert near top
+            }
+            document.getElementById('t-land').innerText = `🏜️ 陆地: ${landTemp.toFixed(1)}°C`;
+            document.getElementById('t-ocean').innerText = `🌊 海洋: ${oceanTemp.toFixed(1)}°C`;
+            document.getElementById('t-land').style.color = landTemp > oceanTemp ? '#ff8888' : '#88aadd';
+
+            updateMonitor();
+
+            const time = Date.now() * 0.001;
+
+            // Calculate Effective Wind
+            // We allow the breeze to fully reverse the wind if the base wind isn't too strong
+            // In "Normal" mode (wind=1.0), a strong night breeze should reverse it.
+            let effectiveWind = currentParams.wind + breezeFactor;
+
+            // Update Wind Monitor with Effective Wind
+            const windDisplay = Math.abs(effectiveWind);
+            const windDir = effectiveWind >= 0 ? "海风 (Sea Breeze) ➡" : "⬅ 陆风 (Land Breeze)";
+            document.getElementById('bar-wind').style.width = Math.min(100, (windDisplay / 4 * 100)) + '%';
+            document.getElementById('val-wind').innerText = (windDisplay * 20).toFixed(1) + ' km/h';
+            if (document.getElementById('wind-dir-hint')) {
+                document.getElementById('wind-dir-hint').innerText = windDir;
+                document.getElementById('wind-dir-hint').style.color = effectiveWind >= 0 ? '#4db8ff' : '#ffaa00';
+            }
+
+            // 1. Evaporation
+            const evapPos = evapSystem.geometry.attributes.position.array;
+            const sunIntensity = dirLight.intensity;
+            // Evap is high when sun is high OR wind is high (but mostly sun for this demo)
+            const evapSpeed = 0.05 * currentParams.evap * (0.2 + sunIntensity * 0.8);
+
+            for (let i = 0; i < evapCount; i++) {
+                if (i > evapCount * Math.min(1, currentParams.evap)) {
+                    evapPos[i * 3 + 1] = -100;
+                    continue;
+                }
+                evapPos[i * 3 + 1] += evapSpeed;
+                evapPos[i * 3] += effectiveWind * 0.02; // Wind drift
+
+                if (evapPos[i * 3 + 1] > 12 || Math.abs(evapPos[i * 3]) > 60) {
+                    evapPos[i * 3 + 1] = 0;
+                    evapPos[i * 3] = (Math.random() - 0.5) * 50 - 30;
+                }
+            }
+            evapSystem.geometry.attributes.position.needsUpdate = true;
+
+            // 2. Clouds
+            const cloudPos = cloudSystem.geometry.attributes.position.array;
+            const cloudSpeed = 0.05 * effectiveWind;
+            for (let i = 0; i < cloudCount; i++) {
+                cloudPos[i * 3] += cloudSpeed;
+                if (cloudPos[i * 3] > 60) cloudPos[i * 3] = -60;
+                if (cloudPos[i * 3] < -60) cloudPos[i * 3] = 60;
+            }
+            cloudSystem.geometry.attributes.position.needsUpdate = true;
+            cloudMat.opacity = (0.3 + currentParams.rain * 0.1) * (0.5 + sunIntensity * 0.5);
+
+            // 3. Rain
+            const rainPos = rainSystem.geometry.attributes.position.array;
+            const rainSpeed = 0.3 * currentParams.rain;
+            rainSystem.visible = currentParams.rain > 0.1;
+            for (let i = 0; i < rainCount; i++) {
+                rainPos[i * 3 + 1] -= rainSpeed;
+                rainPos[i * 3] += effectiveWind * 0.05;
+                if (rainPos[i * 3 + 1] < 0) {
+                    rainPos[i * 3 + 1] = 25;
+                    rainPos[i * 3] = 25 + Math.random() * 30;
+                }
+            }
+            rainSystem.geometry.attributes.position.needsUpdate = true;
+
+            // 4. Upwelling
+            const upPos = upwellSystem.geometry.attributes.position.array;
+            const upSpeed = 0.02 * currentParams.upwell;
+            upwellSystem.visible = currentParams.upwell > 0.1;
+            for (let i = 0; i < upwellCount; i++) {
+                upPos[i * 3] += upSpeed;
+                upPos[i * 3 + 1] += upSpeed * 0.5;
+                if (upPos[i * 3] > 0 || upPos[i * 3 + 1] > -2) {
+                    upPos[i * 3] = -50 + Math.random() * 10;
+                    upPos[i * 3 + 1] = -15;
+                }
+            }
+            upwellSystem.geometry.attributes.position.needsUpdate = true;
+
+            // 5. Wind Arrows
+            windGroup.children.forEach(arrow => {
+                const dir = effectiveWind >= 0 ? 1 : -1;
+                arrow.setDirection(new THREE.Vector3(dir, 0, 0));
+                arrow.position.x += effectiveWind * 0.1;
+                if (arrow.position.x > 40) arrow.position.x = -50;
+                if (arrow.position.x < -50) arrow.position.x = 40;
+                arrow.visible = Math.abs(effectiveWind) > 0.1;
+            });
+
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Start
+        initUI();
+        setScenario('normal');
+        animate();
+
+    </script>
+</body>
+
+</html>

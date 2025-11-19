@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <title>云的族谱：风场与演化可视化</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #0b1015;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        /* UI 层布局 */
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 30px;
+            box-sizing: border-box;
+        }
+
+        /* 1. 顶部抬头 */
+        #header {
+            text-align: center;
+            text-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
+            position: relative;
+            z-index: 2;
+        }
+
+        h1 {
+            margin: 0;
+            color: #fff;
+            font-size: 36px;
+            letter-spacing: 4px;
+            font-weight: 300;
+        }
+
+        #sub-text {
+            color: #4db8ff;
+            font-size: 16px;
+            margin-top: 5px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        #desc-text {
+            color: #ccc;
+            font-size: 14px;
+            margin-top: 15px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 15px;
+            border-radius: 8px;
+            line-height: 1.6;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* 2. 右侧风力仪表盘 */
+        #wind-monitor {
+            position: absolute;
+            top: 50%;
+            right: 30px;
+            transform: translateY(-50%);
+            width: 240px;
+            background: rgba(15, 25, 40, 0.85);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(77, 184, 255, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            color: white;
+            pointer-events: auto;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .monitor-title {
+            font-size: 12px;
+            color: #88aadd;
+            text-transform: uppercase;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+        }
+
+        .gauge-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+
+        .gauge-label {
+            font-size: 13px;
+            color: #ddd;
+        }
+
+        .gauge-val {
+            font-weight: bold;
+            font-size: 14px;
+            color: #4db8ff;
+        }
+
+        /* 箭头容器 */
+        .arrow-box {
+            width: 40px;
+            height: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .arrow {
+            font-size: 20px;
+            color: #fff;
+            transition: transform 0.5s;
+        }
+
+        .wind-bar {
+            height: 4px;
+            background: #333;
+            border-radius: 2px;
+            width: 100%;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+
+        .wind-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4db8ff, #ff4d4d);
+            width: 0%;
+            transition: width 1s ease-in-out;
+        }
+
+        /* 3. 底部进化选项 */
+        #evolution-panel {
+            pointer-events: auto;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .evo-btn {
+            background: rgba(30, 40, 60, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-left: 4px solid #4db8ff;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            min-width: 220px;
+            position: relative;
+        }
+
+        .evo-btn:hover {
+            background: #4db8ff;
+            color: #001f3f;
+            transform: translateY(-5px);
+        }
+
+        .evo-btn .condition {
+            font-size: 11px;
+            opacity: 0.7;
+            display: block;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .evo-btn .target {
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        /* 4. 左侧高度计 */
+        #alt-monitor {
+            position: absolute;
+            top: 50%;
+            left: 30px;
+            transform: translateY(-50%);
+            height: 300px;
+            width: 60px;
+            background: rgba(15, 25, 40, 0.85);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(77, 184, 255, 0.3);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px 0;
+            pointer-events: auto;
+        }
+
+        .alt-scale {
+            flex: 1;
+            width: 2px;
+            background: rgba(255, 255, 255, 0.2);
+            position: relative;
+            margin: 10px 0;
+        }
+
+        .alt-marker {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 8px;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        .alt-label {
+            position: absolute;
+            left: 15px;
+            font-size: 10px;
+            color: #888;
+            transform: translateY(-50%);
+        }
+
+        #plane-indicator {
+            position: absolute;
+            left: -10px;
+            width: 0;
+            height: 0;
+            border-left: 8px solid #ffaa00;
+            border-top: 5px solid transparent;
+            border-bottom: 5px solid transparent;
+            transition: bottom 0.1s;
+            /* Smoother update in JS */
+        }
+
+        #plane-alt-text {
+            position: absolute;
+            left: 15px;
+            top: -15px;
+            color: #ffaa00;
+            font-weight: bold;
+            font-size: 12px;
+            width: 50px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="ui-layer">
+        <div id="header">
+            <h1 id="cloud-name">Cloud Simulator</h1>
+            <div id="sub-text">Initialization</div>
+            <div id="desc-text">Loading atmospheric data...</div>
+        </div>
+
+        <div id="wind-monitor">
+            <div class="monitor-title">💨 大气动力学监测</div>
+
+            <!-- 垂直风 -->
+            <div style="margin-bottom: 20px;">
+                <div class="gauge-row">
+                    <div style="display:flex; align-items:center;">
+                        <div class="arrow-box">
+                            <div class="arrow" id="arrow-v">⬆</div>
+                        </div>
+                        <span class="gauge-label">垂直对流<br><span
+                                style="font-size:10px; opacity:0.6;">(Updraft)</span></span>
+                    </div>
+                    <span class="gauge-val" id="val-v">0 m/s</span>
+                </div>
+                <div class="wind-bar">
+                    <div class="wind-fill" id="bar-v"></div>
+                </div>
+            </div>
+
+            <!-- 水平风 -->
+            <div>
+                <div class="gauge-row">
+                    <div style="display:flex; align-items:center;">
+                        <div class="arrow-box">
+                            <div class="arrow" id="arrow-h">➡</div>
+                        </div>
+                        <span class="gauge-label">水平风切变<br><span style="font-size:10px; opacity:0.6;">(Wind
+                                Shear)</span></span>
+                    </div>
+                    <span class="gauge-val" id="val-h">0 m/s</span>
+                </div>
+                <div class="wind-bar">
+                    <div class="wind-fill" id="bar-h"></div>
+                </div>
+            </div>
+
+            <div
+                style="margin-top: 15px; font-size: 12px; color: #aaa; border-top: 1px solid rgba(255,255,255,0.1); padding-top:10px;">
+                环境状态: <span id="env-status" style="color: #fff; font-weight: bold;">Stable</span>
+            </div>
+        </div>
+
+        <div id="evolution-panel">
+            <!-- Buttons generated by JS -->
+        </div>
+
+        <div id="alt-monitor">
+            <div style="font-size:10px; color:#88aadd; margin-bottom:5px;">ALT</div>
+            <div class="alt-scale">
+                <div class="alt-marker" style="bottom:0%"><span class="alt-label">0km</span></div>
+                <div class="alt-marker" style="bottom:25%"><span class="alt-label">3km</span></div>
+                <div class="alt-marker" style="bottom:50%"><span class="alt-label">6km</span></div>
+                <div class="alt-marker" style="bottom:75%"><span class="alt-label">9km</span></div>
+                <div class="alt-marker" style="bottom:100%"><span class="alt-label">12km</span></div>
+
+                <div id="plane-indicator" style="bottom: 10%;">
+                    <div id="plane-alt-text">1.2km</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+                "tween": "https://unpkg.com/@tweenjs/tween.js@23.1.1/dist/tween.esm.js"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import TWEEN from 'tween';
+
+        // --- 1. 数据配置：演化路径与风力参数 ---
+        const CLOUD_EVOLUTION = {
+            'vapor': {
+                name: "💧 水蒸气 (Vapor)",
+                sub: "无形阶段",
+                desc: "地面受热，不可见的水分子开始活跃。此时垂直热对流刚刚开始。",
+                wind: { v: 2, h: 1, turb: 0.1, curl: 0.1 },
+                altitude: 5, // Near ground
+                env: "地面加热中...",
+                options: [
+                    { target: 'cumulus_humilis', condition: "🔥 热空气上升 + 凝结", text: "形成淡积云" }
+                ]
+            },
+            'cumulus_humilis': {
+                name: "☁️ 淡积云 (Cumulus Humilis)",
+                sub: "初生期",
+                desc: "晴天小云朵。依靠温和的垂直上升气流维持，如果风太大就会被吹散。",
+                wind: { v: 5, h: 2, turb: 0.2, curl: 0.3 },
+                altitude: 15, // Low
+                env: "气流平稳 (Stable)",
+                options: [
+                    { target: 'vapor', condition: "💨 空气干燥/下沉", text: "蒸发消散" },
+                    { target: 'cumulus_congestus', condition: "🌡️ 强热对流 (Strong Updraft)", text: "爆发增长：浓积云" },
+                    { target: 'stratocumulus', condition: "🌬️ 逆温层阻挡/水平扩散", text: "平铺：层积云" }
+                ]
+            },
+            'cumulus_congestus': {
+                name: "🥦 浓积云 (Cumulus Congestus)",
+                sub: "活跃发展期",
+                desc: "强烈的上升气流像泵一样把水汽送入高空。云体内对流旺盛。",
+                wind: { v: 15, h: 3, turb: 0.5, curl: 0.8 },
+                altitude: 30, // Mid
+                env: "大气不稳定 (Unstable)",
+                options: [
+                    { target: 'cumulonimbus', condition: "⚡ 能量爆发 + 高空冰晶化", text: "进化：积雨云" },
+                    { target: 'cumulus_humilis', condition: "📉 热力减弱", text: "退化：淡积云" }
+                ]
+            },
+            'cumulonimbus': {
+                name: "⛈️ 积雨云 (Cumulonimbus)",
+                sub: "风暴成熟期",
+                desc: "极强上升气流冲破对流层！顶部遇高空强风形成铁砧。内部气流极度混乱。",
+                wind: { v: 25, h: 20, turb: 1.5, curl: 2.0 }, // High curl for vortices
+                altitude: 45, // High vertical extent
+                env: "⚡ 剧烈风暴 (Storm)",
+                options: [
+                    { target: 'cirrus_spissatus', condition: "☔ 暴雨耗尽能量", text: "残余：伪卷云" }
+                ]
+            },
+            'stratocumulus': {
+                name: "🌊 层积云 (Stratocumulus)",
+                sub: "稳定期",
+                desc: "垂直气流受阻，云体只能沿水平方向铺开。通常风速平缓。",
+                wind: { v: 1, h: 8, turb: 0.1, curl: 0.2 },
+                altitude: 12, // Low-Mid
+                env: "层结稳定",
+                options: [
+                    { target: 'stratus', condition: "🌫️ 云底降低", text: "变成层云" },
+                    { target: 'cumulus_humilis', condition: "☀ 扰动分解", text: "断裂为积云" }
+                ]
+            },
+            'stratus': {
+                name: "🌫️ 层云 (Stratus)",
+                sub: "静稳期",
+                desc: "风力微弱，几乎没有垂直运动。像死水一样的云层。",
+                wind: { v: 0.5, h: 4, turb: 0.05, curl: 0.0 },
+                altitude: 8, // Very Low
+                env: "静风/微风",
+                options: [
+                    { target: 'stratocumulus', condition: "🌬️ 气流扰动", text: "抬升为层积云" }
+                ]
+            },
+            'cirrus_spissatus': {
+                name: "🪶 密卷云 (Cirrus Spissatus)",
+                sub: "高空残留",
+                desc: "位于极高空，完全受'高空急流'控制。风速极快，将云拉成丝。",
+                wind: { v: 0, h: 30, turb: 0.2, curl: 0.5 },
+                altitude: 70, // Very High
+                env: "高空急流 (Jet Stream)",
+                options: [
+                    { target: 'vapor', condition: "💨 吹散", text: "循环：重置" }
+                ]
+            }
+        };
+
+        // --- 2. 场景初始化 ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x11151c);
+        scene.fog = new THREE.FogExp2(0x11151c, 0.002);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 20, 90);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 0.5;
+
+        // 灯光
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+        const sunLight = new THREE.DirectionalLight(0xffffff, 1.0);
+        sunLight.position.set(50, 100, 50);
+        scene.add(sunLight);
+
+        // 地面网格
+        const grid = new THREE.GridHelper(200, 40, 0x445566, 0x223344);
+        grid.position.y = -20;
+        scene.add(grid);
+
+        // --- 3. 风场可视化系统 (Wind Field System) ---
+        // 使用线条模拟气流
+        const windLinesGroup = new THREE.Group();
+        scene.add(windLinesGroup);
+
+        const windParticles = [];
+        const windCount = 200;
+
+        // 创建风的线条几何体
+        const windGeo = new THREE.BufferGeometry();
+        // 每个线条是一个简单的 2点 线段，但在update中我们会移动它们
+        // 为了简化，这里使用 Trail 风格的粒子 (长条 Sprite)
+
+        function createWindTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 64; canvas.height = 16;
+            const ctx = canvas.getContext('2d');
+            const g = ctx.createLinearGradient(0, 0, 64, 0);
+            g.addColorStop(0, 'rgba(255,255,255,0)');
+            g.addColorStop(0.5, 'rgba(255,255,255,0.5)');
+            g.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = g;
+            ctx.fillRect(0, 0, 64, 16);
+            return new THREE.CanvasTexture(canvas);
+        }
+        const windMat = new THREE.SpriteMaterial({
+            map: createWindTexture(),
+            color: 0x88ccff,
+            transparent: true,
+            opacity: 0.4,
+            blending: THREE.AdditiveBlending
+        });
+
+        for (let i = 0; i < windCount; i++) {
+            const p = new THREE.Sprite(windMat.clone());
+            p.position.set((Math.random() - 0.5) * 100, (Math.random() - 0.5) * 50 + 20, (Math.random() - 0.5) * 100);
+            p.scale.set(5, 0.5, 1); // 初始细长
+            p.userData = {
+                id: i,
+                speedMod: Math.random() * 0.5 + 0.5, // 速度差异
+                resetY: -20
+            };
+            windLinesGroup.add(p);
+            windParticles.push(p);
+        }
+
+        // --- 4. 云粒子系统 ---
+        function createCloudTexture() {
+            const c = document.createElement('canvas');
+            c.width = 64; c.height = 64;
+            const ctx = c.getContext('2d');
+            const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+            g.addColorStop(0, 'rgba(255,255,255,1)');
+            g.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = g;
+            ctx.fillRect(0, 0, 64, 64);
+            return new THREE.CanvasTexture(c);
+        }
+        const cloudMat = new THREE.SpriteMaterial({ map: createCloudTexture(), color: 0xffffff, transparent: true, opacity: 0.8 });
+
+        const cloudGroup = new THREE.Group();
+        scene.add(cloudGroup);
+        const cloudParticles = [];
+
+        for (let i = 0; i < 300; i++) {
+            const p = new THREE.Sprite(cloudMat.clone());
+            p.position.y = -100; // Hide initially
+            p.userData = { noise: Math.random() };
+            cloudGroup.add(p);
+            cloudParticles.push(p);
+        }
+
+        // --- 5. 状态管理与动画逻辑 ---
+        let currentEnv = { v: 0, h: 0, turb: 0, curl: 0, alt: 10 };
+        let targetEnv = { v: 0, h: 0, turb: 0, curl: 0, alt: 10 };
+
+        function morphTo(key) {
+            const data = CLOUD_EVOLUTION[key];
+
+            // 1. 更新文本 UI
+            document.getElementById('cloud-name').innerText = data.name;
+            document.getElementById('sub-text').innerText = data.sub;
+            document.getElementById('desc-text').innerText = data.desc;
+            document.getElementById('env-status').innerText = data.env;
+
+            updateButtons(data.options);
+
+            // 2. 更新环境目标值
+            targetEnv.v = data.wind.v;
+            targetEnv.h = data.wind.h;
+            targetEnv.turb = data.wind.turb;
+            targetEnv.curl = data.wind.curl;
+            targetEnv.alt = data.altitude;
+
+            updateWindGaugeUI(targetEnv);
+
+            // 3. 背景环境色调整
+            let bgHex = 0x11151c;
+            if (key === 'vapor') bgHex = 0x87CEEB;
+            if (key.includes('cumulus')) bgHex = 0x4db8ff;
+            if (key === 'cumulonimbus') bgHex = 0x1a1a2e; // 暴风雨暗
+            if (key === 'stratus') bgHex = 0x778899;
+
+            new TWEEN.Tween(scene.background)
+                .to(new THREE.Color(bgHex), 2000)
+                .start();
+
+            // 4. 云粒子变形 (Morphing Logic)
+            cloudParticles.forEach((p, i) => {
+                let tx = 0, ty = 0, tz = 0, s = 1, op = 1, vis = true;
+                const r = p.userData.noise;
+
+                switch (key) {
+                    case 'vapor':
+                        vis = i < 100;
+                        tx = (r - 0.5) * 60; ty = -15 + r * 10; tz = (Math.random() - 0.5) * 60;
+                        s = 2; op = 0.3; // 半透明
+                        p.material.color.setHex(0xaaddff);
+                        break;
+                    case 'cumulus_humilis':
+                        vis = i < 120;
+                        tx = (r - 0.5) * 30; ty = 0 + Math.sin(r * Math.PI) * 15; tz = (Math.random() - 0.5) * 30;
+                        s = 8; op = 0.8;
+                        p.material.color.setHex(0xffffff);
+                        break;
+                    case 'cumulus_congestus':
+                        vis = i < 250;
+                        tx = (r - 0.5) * 30; ty = 0 + Math.pow(r, 1.5) * 50; tz = (Math.random() - 0.5) * 30;
+                        s = 10; op = 0.9;
+                        p.material.color.setHex(0xffffff);
+                        break;
+                    case 'cumulonimbus':
+                        vis = true;
+                        let h = r * 70;
+                        let w = 25;
+                        if (h > 50) w = 25 + (h - 50) * 5; // 铁砧
+                        tx = (Math.random() - 0.5) * w; ty = h - 5; tz = (Math.random() - 0.5) * w;
+                        s = 15; op = 1;
+                        // 底部黑
+                        if (h < 20) p.material.color.setHex(0x444455);
+                        else p.material.color.setHex(0xffffff);
+                        break;
+                    case 'stratocumulus':
+                        vis = i < 200;
+                        tx = (r - 0.5) * 100; ty = 10 + Math.sin(tx * 0.2) * 5; tz = (Math.random() - 0.5) * 80;
+                        s = 10; op = 0.8;
+                        p.material.color.setHex(0xeeeeee);
+                        break;
+                    case 'stratus':
+                        vis = i < 250;
+                        tx = (r - 0.5) * 120; ty = 5 + r * 5; tz = (Math.random() - 0.5) * 100;
+                        s = 15; op = 0.5;
+                        p.material.color.setHex(0xcccccc);
+                        break;
+                    case 'cirrus_spissatus':
+                        vis = i < 150;
+                        tx = (r - 0.5) * 80; ty = 60 + r * 10; tz = (Math.random() - 0.5) * 40;
+                        s = 5; op = 0.6;
+                        p.scale.set(15, 2, 1); // 拉长
+                        break;
+                }
+
+                if (vis) {
+                    p.visible = true;
+                    new TWEEN.Tween(p.position).to({ x: tx, y: ty, z: tz }, 2000).easing(TWEEN.Easing.Quadratic.InOut).start();
+                    new TWEEN.Tween(p.scale).to({ x: s, y: s }, 2000).start();
+                    new TWEEN.Tween(p.material).to({ opacity: op }, 1000).start();
+                } else {
+                    new TWEEN.Tween(p.material).to({ opacity: 0 }, 1000).onComplete(() => { p.visible = false }).start();
+                }
+            });
+        }
+
+        function updateWindGaugeUI(wind) {
+            // 垂直风条 (Max 30)
+            const vPct = Math.min((wind.v / 30) * 100, 100);
+            document.getElementById('bar-v').style.width = vPct + '%';
+            document.getElementById('val-v').innerText = wind.v + " m/s";
+
+            // 水平风条 (Max 40)
+            const hPct = Math.min((wind.h / 40) * 100, 100);
+            document.getElementById('bar-h').style.width = hPct + '%';
+            document.getElementById('val-h').innerText = wind.h + " m/s";
+
+            // 箭头旋转
+            const arrowV = document.getElementById('arrow-v');
+            if (wind.v > 5) arrowV.style.transform = "rotate(0deg)"; // Up
+            else if (wind.v < 0) arrowV.style.transform = "rotate(180deg)"; // Down
+            else arrowV.style.transform = "scale(0.8)"; // Weak
+
+            const arrowH = document.getElementById('arrow-h');
+            arrowH.style.transform = `rotate(-90deg) scale(${0.5 + wind.h / 20})`; // Right, scale by speed
+        }
+
+        function updateButtons(options) {
+            const panel = document.getElementById('evolution-panel');
+            panel.innerHTML = '';
+            options.forEach(opt => {
+                const btn = document.createElement('div');
+                btn.className = 'evo-btn';
+                btn.innerHTML = `<span class="condition">${opt.condition}</span><span class="target">${opt.text}</span>`;
+                btn.onclick = () => morphTo(opt.target);
+                panel.appendChild(btn);
+            });
+        }
+
+        // --- 6. 动画循环 ---
+        morphTo('vapor');
+
+        function animate() {
+            requestAnimationFrame(animate);
+            TWEEN.update();
+            controls.update();
+
+            // 平滑插值当前环境参数
+            currentEnv.v += (targetEnv.v - currentEnv.v) * 0.02;
+            currentEnv.h += (targetEnv.h - currentEnv.h) * 0.02;
+            currentEnv.turb += (targetEnv.turb - currentEnv.turb) * 0.02;
+            currentEnv.curl += (targetEnv.curl - currentEnv.curl) * 0.02;
+            currentEnv.alt += (targetEnv.alt - currentEnv.alt) * 0.01; // Altitude changes slower
+
+            // 更新风场粒子 (Wind Lines Animation)
+            windParticles.forEach(p => {
+                const spd = p.userData.speedMod;
+
+                // 1. 基础风力位移
+                p.position.y += currentEnv.v * 0.05 * spd;
+                p.position.x += currentEnv.h * 0.05 * spd;
+
+                // 2. 增加流动感：正弦波扰动 + 卷风 (Curl)
+                const time = Date.now() * 0.001;
+                // Curl effect: 旋转场
+                const curlFreq = 0.05;
+                const curlForce = currentEnv.curl * 0.2;
+
+                // 简单的 curl noise 模拟：dx = sin(y), dy = cos(x)
+                const curlX = Math.cos(p.position.y * curlFreq + time) * curlForce;
+                const curlY = Math.sin(p.position.x * curlFreq + time) * curlForce;
+
+                // 叠加 turbulence noise
+                const noiseX = Math.sin(p.position.y * 0.1 + time) * currentEnv.turb;
+                const noiseY = Math.cos(p.position.x * 0.1 + time) * currentEnv.turb;
+
+                p.position.x += (noiseX + curlX) * 0.1;
+                p.position.y += (noiseY + curlY) * 0.1;
+
+                // 3. 视觉朝向与拉伸
+                const vx = currentEnv.h + (noiseX + curlX) * 5;
+                const vy = currentEnv.v + (noiseY + curlY) * 5;
+
+                const angle = Math.atan2(vy, vx);
+                p.material.rotation = angle;
+
+                const speed = Math.sqrt(vx * vx + vy * vy);
+                p.scale.set(2 + speed * 0.2, 0.2 + speed * 0.01, 1);
+
+                // 4. 边界循环
+                const limit = 80;
+                if (currentEnv.v > 0) {
+                    if (p.position.y > limit) {
+                        p.position.y = -limit;
+                        p.position.x = (Math.random() - 0.5) * 160;
+                    }
+                } else {
+                    if (p.position.y < -limit) {
+                        p.position.y = limit;
+                        p.position.x = (Math.random() - 0.5) * 160;
+                    }
+                }
+
+                if (currentEnv.h > 0) {
+                    if (p.position.x > limit) {
+                        p.position.x = -limit;
+                        p.position.y = (Math.random() - 0.5) * 100;
+                    }
+                } else if (currentEnv.h < 0) {
+                    if (p.position.x < -limit) {
+                        p.position.x = limit;
+                        p.position.y = (Math.random() - 0.5) * 100;
+                    }
+                }
+            });
+
+            // 云的微动
+            cloudParticles.forEach(p => {
+                if (p.visible) {
+                    p.position.x += Math.sin(Date.now() * 0.001 + p.userData.noise) * currentEnv.turb * 0.1;
+                    p.position.y += Math.cos(Date.now() * 0.002 + p.userData.noise) * currentEnv.v * 0.002;
+                }
+            });
+
+            // 更新飞机
+            if (typeof updatePlane === 'function') {
+                updatePlane();
+            }
+
+            // 更新 UI: 高度计
+            // Map planeY (-20 to 100) to 0-12km (0% to 100%)
+            // Let's assume Y=-20 is 0km, Y=100 is 12km. Range = 120.
+            const planeH = planeGroup.position.y;
+            const pct = Math.max(0, Math.min(100, ((planeH + 20) / 120) * 100));
+            const km = ((planeH + 20) / 10).toFixed(1); // 1 unit = 0.1km approx
+
+            document.getElementById('plane-indicator').style.bottom = pct + '%';
+            document.getElementById('plane-alt-text').innerText = km + 'km';
+
+            // --- 镜头跟随高度 (Camera Follow) ---
+            // 目标相机高度 = 基础高度 (20) + 飞机高度 * 0.8
+            // 限制最低高度，防止钻地
+            const targetCamY = Math.max(20, 20 + planeH * 0.8);
+            const targetLookY = Math.max(0, planeH * 0.5);
+
+            // 平滑插值
+            camera.position.y += (targetCamY - camera.position.y) * 0.05;
+            controls.target.y += (targetLookY - controls.target.y) * 0.05;
+
+            renderer.render(scene, camera);
+        }
+
+        // --- 7. 飞机 (The Plane) ---
+        const planeGroup = new THREE.Group();
+        scene.add(planeGroup);
+
+        function createPlane() {
+            // 机身
+            const bodyGeo = new THREE.ConeGeometry(0.5, 3, 8);
+            bodyGeo.rotateX(Math.PI / 2);
+            const bodyMat = new THREE.MeshPhongMaterial({ color: 0xffaa00, flatShading: true });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+
+            // 机翼
+            const wingGeo = new THREE.BoxGeometry(4, 0.1, 1);
+            const wingMat = new THREE.MeshPhongMaterial({ color: 0xffffff, flatShading: true });
+            const wing = new THREE.Mesh(wingGeo, wingMat);
+            wing.position.set(0, 0, 0.5);
+            // 尾翼
+            const tailGeo = new THREE.BoxGeometry(1.5, 0.1, 0.8);
+            const tail = new THREE.Mesh(tailGeo, wingMat);
+            tail.position.set(0, 0, -1.2);
+
+            // 垂直尾翼
+            const vTailGeo = new THREE.BoxGeometry(0.1, 0.8, 0.8);
+            const vTail = new THREE.Mesh(vTailGeo, wingMat);
+            vTail.position.set(0, 0.4, -1.2);
+
+            // 螺旋桨 (Propeller)
+            const propGeo = new THREE.BoxGeometry(2.2, 0.1, 0.1);
+            const propMat = new THREE.MeshPhongMaterial({ color: 0x333333 });
+            const propeller = new THREE.Mesh(propGeo, propMat);
+            propeller.position.set(0, 0, 1.6);
+
+            // 组合
+            const plane = new THREE.Group();
+            plane.add(body);
+            plane.add(wing);
+            plane.add(tail);
+            plane.add(vTail);
+            plane.add(propeller);
+
+            // 保存螺旋桨引用以便旋转
+            plane.userData = { propeller: propeller };
+
+            return plane;
+        }
+
+        const myPlane = createPlane();
+        planeGroup.add(myPlane);
+
+        // 飞机动画状态
+        let planeAngle = 0;
+        // 物理状态
+        let planeY = 10; // 目标巡航高度
+        let verticalVelocity = 0;
+
+        function updatePlane(dt) {
+            // 1. 飞行路径 (大圆周运动)
+            planeAngle += 0.005;
+            const r = 40;
+            const px = Math.cos(planeAngle) * r;
+            const pz = Math.sin(planeAngle) * r;
+
+            // --- 物理模拟核心 ---
+            // 垂直风力影响 (Lift from Updraft)
+            const liftForce = currentEnv.v * 0.02;
+
+            // 自动驾驶/重力恢复力 (Restoring Force)
+            // 飞机试图回到 currentEnv.alt 的高度
+            const targetAltitude = currentEnv.alt;
+            const altitudeError = targetAltitude - planeGroup.position.y;
+            const restoreForce = altitudeError * 0.01; // 弹簧系数
+
+            // 简单的欧拉积分
+            verticalVelocity += liftForce + restoreForce;
+            verticalVelocity *= 0.95; // 阻力/阻尼
+
+            // 应用位移
+            planeGroup.position.y += verticalVelocity;
+
+            // 限制一下最大高度防止飞出屏幕太远
+            if (planeGroup.position.y > 80) planeGroup.position.y = 80;
+            if (planeGroup.position.y < -20) planeGroup.position.y = -20;
+
+            // --- 姿态响应 (Attitude) ---
+            // 计算切线方向作为朝向
+            const targetPos = new THREE.Vector3(px, planeGroup.position.y, pz);
+            const lookAtPos = new THREE.Vector3(
+                Math.cos(planeAngle + 0.1) * r,
+                planeGroup.position.y + verticalVelocity * 5, // 稍微看向运动方向
+                Math.sin(planeAngle + 0.1) * r
+            );
+
+            planeGroup.position.x = px;
+            planeGroup.position.z = pz;
+            planeGroup.lookAt(lookAtPos);
+
+            // 额外的姿态扰动
+            const turb = currentEnv.turb;
+            const curl = currentEnv.curl;
+
+            // Pitch (俯仰): 
+            // 1. 随垂直速度倾斜 (爬升时抬头)
+            // 2. 乱流扰动
+            const pitchOffset = verticalVelocity * 0.2 + (Math.random() - 0.5) * turb * 0.2;
+            myPlane.rotation.x = pitchOffset;
+
+            // Roll (翻滚):
+            // 1. 转弯时的自然倾斜 (向圆心倾斜)
+            // 2. 乱流扰动 (不均匀升力) + 卷风影响
+            const bankAngle = -Math.PI / 8; // 基础转弯倾角
+            const rollOffset = (Math.random() - 0.5) * turb * 0.5 + Math.sin(Date.now() * 0.002) * curl * 0.3;
+            myPlane.rotation.z = bankAngle + rollOffset;
+
+            // 3. 螺旋桨旋转
+            myPlane.userData.propeller.rotation.z += 0.5;
+        }
+
+
+
+
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+
+</html>

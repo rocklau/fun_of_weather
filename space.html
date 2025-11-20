@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yang-Mills Spacetime Concepts</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+            font-family: 'Courier New', monospace;
+        }
+
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* UI Overlay */
+        #ui-layer {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #00d2ff;
+            pointer-events: none;
+            text-shadow: 0 0 8px rgba(0, 210, 255, 0.8);
+            background: rgba(0, 0, 0, 0.6);
+            padding: 20px;
+            border-left: 3px solid #00d2ff;
+            backdrop-filter: blur(5px);
+            z-index: 10;
+            border-radius: 0 8px 8px 0;
+        }
+
+        h1 {
+            margin: 0 0 10px 0;
+            font-size: 22px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        p {
+            font-size: 13px;
+            max-width: 320px;
+            color: #aaddff;
+            margin-bottom: 5px;
+            line-height: 1.4;
+        }
+
+        .highlight {
+            color: #ffaa00;
+            font-weight: bold;
+        }
+
+        .legend-box {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 5px;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        /* AI Panel Styles */
+        #ai-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            width: 350px;
+            background: rgba(0, 10, 20, 0.85);
+            border: 1px solid #00d2ff;
+            box-shadow: 0 0 15px rgba(0, 210, 255, 0.2);
+            padding: 15px;
+            color: #aaddff;
+            font-family: 'Segoe UI', sans-serif;
+            border-radius: 8px;
+            z-index: 20;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            backdrop-filter: blur(10px);
+        }
+
+        #ai-header {
+            font-size: 16px;
+            font-weight: bold;
+            color: #fff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+            border-bottom: 1px solid rgba(0, 210, 255, 0.3);
+            padding-bottom: 5px;
+        }
+
+        .ai-btn {
+            background: linear-gradient(45deg, #005588, #0088aa);
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s;
+            text-shadow: 0 1px 2px black;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        .ai-btn:hover {
+            background: linear-gradient(45deg, #006699, #00aadd);
+            box-shadow: 0 0 10px rgba(0, 210, 255, 0.5);
+        }
+
+        .ai-btn:disabled {
+            background: #333;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        #ai-response {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 4px;
+            min-height: 60px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 13px;
+            line-height: 1.5;
+            border-left: 2px solid #ffaa00;
+            margin-top: 5px;
+        }
+
+        #ai-input-group {
+            display: flex;
+            gap: 5px;
+        }
+
+        #user-input {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #005577;
+            color: white;
+            padding: 8px;
+            border-radius: 4px;
+            outline: none;
+        }
+
+        #user-input:focus {
+            border-color: #00d2ff;
+        }
+
+        .typing-indicator::after {
+            content: '...';
+            animation: typing 1.5s steps(4, end) infinite;
+        }
+
+        @keyframes typing {
+
+            0%,
+            100% {
+                content: '';
+            }
+
+            50% {
+                content: '...';
+            }
+        }
+
+        /* Loading Text */
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 24px;
+            pointer-events: none;
+            transition: opacity 0.5s;
+            z-index: 0;
+        }
+    </style>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.7/dat.gui.min.js"></script>
+</head>
+
+<body>
+
+    <div id="loading">加载杨-米尔斯时空概念...</div>
+
+    <div id="ui-layer">
+        <h1>杨-米尔斯时空概念演示</h1>
+        <p>当前视图: <span class="highlight">广义相对论 (时空曲率) + 规范场 (粒子交互)</span></p>
+        <div class="legend-box">
+            <span class="dot"
+                style="background:linear-gradient(45deg, #FF0000, #00FF00, #0000FF);"></span><span><b>杨-米尔斯场 (Gauge
+                    Field):</b> 模拟基本粒子间的相互作用</span>
+        </div>
+        <div class="legend-box">
+            <span class="dot" style="background:#ff5500;"></span><span><b>黑洞/白洞:</b> 引力奇点 & 时空曲率源</span>
+        </div>
+        <div class="legend-box">
+            <span class="dot" style="background:#88ccff;"></span><span><b>霍金辐射 (Hawking Radiation):</b> 黑洞附近的量子效应</span>
+        </div>
+        <p style="margin-top:10px">通过控制面板调整规范场强度和引力波强度，观察它们如何共同塑造时空。</p>
+    </div>
+
+
+    <div id="ai-panel">
+        <div id="ai-header">
+            <span>AI 随船物理学家</span>
+            <span style="font-size:10px; opacity:0.7">Gemini-Pro Powered</span>
+        </div>
+
+        <button id="analyze-btn" class="ai-btn">
+            ✨ 解释杨-米尔斯场与时空曲率的关系
+        </button>
+
+        <div id="ai-response">
+            系统就绪。请调整参数，观察规范场强度对粒子“色荷”互动的影响。
+        </div>
+
+        <div id="ai-input-group">
+            <input type="text" id="user-input" placeholder="例：杨-米尔斯场中的颜色变化象征什么？">
+            <button id="ask-btn" class="ai-btn">发送</button>
+        </div>
+    </div>
+
+    <div id="canvas-container"></div>
+
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.7/dat.gui.min.js"></script>
+
+    <script type="x-shader/x-vertex" id="vertexShader">
+        varying vec3 vNormal;
+        void main() {
+            vNormal = normalize(normalMatrix * normal);
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+    </script>
+    <script type="x-shader/x-fragment" id="fragmentShader">
+        varying vec3 vNormal;
+        uniform float time;
+        uniform vec3 color;
+        void main() {
+            float intensity = pow(0.6 - dot(vNormal, vec3(0, 0, 1.0)), 4.0);
+            float pulse = 0.8 + 0.2 * sin(time * 3.0);
+            gl_FragColor = vec4(color, 1.0) * intensity * pulse;
+        }
+    </script>
+    <script type="x-shader/x-fragment" id="greenGlowFragmentShader">
+        varying vec3 vNormal;
+        uniform float time;
+        uniform vec3 color;
+        void main() {
+            float intensity = pow(0.5 - dot(vNormal, vec3(0, 0, 1.0)), 2.0);
+            float pulse = 0.5 + 0.5 * sin(time * 5.0);
+            gl_FragColor = vec4(color, 0.2) * intensity * pulse;
+        }
+    </script>
+
+
+    <script>
+        // --- Configuration ---
+        const config = {
+            mass: 40,
+            spin: 0.02,
+            lightCones: true,
+            gridOpacity: 0.3,
+            BRANE_Y_SEP: 30,
+            waveAmplitude: 2.0,
+            waveSpeed: 5.0,
+            hawkingRadiation: 0.5,
+            showWormhole: true,
+            yangMillsStrength: 0.5, // NEW: 杨-米尔斯场强度
+            gaugeFieldCount: 150,   // NEW: 规范场线条数
+        };
+
+        // --- Gemini API (Unchanged) ---
+        const apiKey = "";
+        const apiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+        async function callGemini(prompt) {
+            const responseDiv = document.getElementById('ai-response');
+            const analyzeBtn = document.getElementById('analyze-btn');
+            const askBtn = document.getElementById('ask-btn');
+
+            responseDiv.innerHTML = "正在解析概念... <span class='typing-indicator'></span>";
+            analyzeBtn.disabled = true;
+            askBtn.disabled = true;
+
+            const systemPrompt = "你是一位理论物理学家和科幻概念设计师。你的任务是解释眼前的三维可视化系统，该系统代表了广义相对论（时空曲率、引力波）与量子场论（杨-米尔斯规范场、霍金辐射）的结合。请以专业且生动的语言进行阐述。回答请使用中文。";
+
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                systemInstruction: { parts: [{ text: systemPrompt }] }
+            };
+            const maxRetries = 5;
+            let retryCount = 0;
+            let delay = 1000;
+            let success = false;
+
+            while (retryCount <= maxRetries && !success) {
+                try {
+                    const response = await fetch(apiEndpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!response.ok) throw new Error(`API Error: ${response.status}`);
+                    const data = await response.json();
+                    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "无数据返回";
+                    responseDiv.innerHTML = text.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+                    success = true;
+                } catch (error) {
+                    if (retryCount === maxRetries) {
+                        responseDiv.innerHTML = `连接中断。<br><small>${error.message}</small>`;
+                    } else {
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        delay *= 2;
+                    }
+                    retryCount++;
+                }
+            }
+            analyzeBtn.disabled = false;
+            askBtn.disabled = false;
+        }
+
+        // --- AI UI Logic (Updated Prompt) ---
+        document.getElementById('analyze-btn').addEventListener('click', () => {
+            const prompt = `
+            当前模型展示:
+            - 时空曲率 (BH/WH): 广义相对论，引力。
+            - 引力波 (Waves): 时空网格上的涟漪。
+            - 霍金辐射 (HR): 量子效应，逃逸粒子。
+            - 杨-米尔斯场 (Gauge Field): 环绕奇点的彩色动态场线。
+            - 粒子色荷互动: 粒子颜色随场强变化。
+            
+            请解释杨-米尔斯规范场与爱因斯坦广义相对论的视觉结合，以及杨振宁的理论是如何在此模型中抽象体现的。控制在120字以内。`;
+            callGemini(prompt);
+        });
+
+        document.getElementById('ask-btn').addEventListener('click', () => {
+            const val = document.getElementById('user-input').value;
+            if (val) {
+                callGemini(`用户提问: "${val}"\n请基于杨-米尔斯理论、时空曲率和量子效应概念回答。100字左右。`);
+                document.getElementById('user-input').value = '';
+            }
+        });
+        document.getElementById('user-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') document.getElementById('ask-btn').click();
+        });
+
+        // --- 3D Scene Setup ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x1a0033);
+        scene.fog = new THREE.FogExp2(0x1a0033, 0.0015);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
+        camera.position.set(0, config.BRANE_Y_SEP + 40, 100);
+        camera.lookAt(0, 0, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+
+        // --- Singularity X-Z Position ---
+        const singularityX = 0;
+        const singularityZ = 0;
+
+        // Lights
+        const ambientLight = new THREE.AmbientLight(0x404040);
+        scene.add(ambientLight);
+
+        const pointLightBH = new THREE.PointLight(0xff5500, 4, 80);
+        pointLightBH.position.set(singularityX, -config.BRANE_Y_SEP / 2 + 10, singularityZ);
+        scene.add(pointLightBH);
+        const pointLightWH = new THREE.PointLight(0x00ffff, 2, 80);
+        pointLightWH.position.set(singularityX, config.BRANE_Y_SEP / 2 + 10, singularityZ);
+        scene.add(pointLightWH);
+
+
+        // --- Helper: Gravity Calculation (Two Separate Curvatures) ---
+        function getBHDepth(x, z_world) {
+            const dx = x - singularityX;
+            const dz = z_world - singularityZ;
+            const dist = Math.sqrt(dx * dx + dz * dz);
+            let depth = 0;
+            if (dist < 50) depth = -config.mass / (Math.pow(dist, 0.8) + 1);
+            return Math.max(-50, depth);
+        }
+
+        function getWHHeight(x, z_world) {
+            const dx = x - singularityX;
+            const dz = z_world - singularityZ;
+            const dist = Math.sqrt(dx * dx + dz * dz);
+            let height = 0;
+            if (dist < 50) height = config.mass / (Math.pow(dist, 0.8) + 1);
+            return Math.min(40, height);
+        }
+
+        // --- The Branes (Grids) ---
+        const planeGeo = new THREE.PlaneGeometry(240, 140, 120, 70);
+        const planeMat = new THREE.MeshBasicMaterial({
+            color: 0x00d2ff,
+            wireframe: true,
+            transparent: true,
+            opacity: config.gridOpacity,
+            side: THREE.DoubleSide
+        });
+
+        const bhBrane = new THREE.Mesh(planeGeo.clone(), planeMat.clone());
+        bhBrane.position.y = -config.BRANE_Y_SEP / 2;
+        bhBrane.rotation.x = -Math.PI / 2;
+        scene.add(bhBrane);
+        const bhOriginalPositions = planeGeo.attributes.position.array.slice();
+
+        const whBrane = new THREE.Mesh(planeGeo.clone(), planeMat.clone());
+        whBrane.position.y = config.BRANE_Y_SEP / 2;
+        whBrane.rotation.x = -Math.PI / 2;
+        scene.add(whBrane);
+        const whOriginalPositions = planeGeo.attributes.position.array.slice();
+
+
+        // --- Glow Shader Material (Red/Orange) ---
+        const glowMaterialBH = new THREE.ShaderMaterial({
+            uniforms: { time: { value: 1.0 }, color: { value: new THREE.Color(0xff3300) } },
+            vertexShader: document.getElementById('vertexShader').textContent,
+            fragmentShader: document.getElementById('fragmentShader').textContent,
+            side: THREE.FrontSide,
+            blending: THREE.AdditiveBlending,
+            transparent: true
+        });
+
+        // --- Exotic Matter Glow Material (Green/Cyan) ---
+        const glowMaterialExotic = new THREE.ShaderMaterial({
+            uniforms: { time: { value: 1.0 }, color: { value: new THREE.Color(0x00ffaa) } },
+            vertexShader: document.getElementById('vertexShader').textContent,
+            fragmentShader: document.getElementById('greenGlowFragmentShader').textContent,
+            side: THREE.BackSide,
+            blending: THREE.AdditiveBlending,
+            transparent: true
+        });
+
+        // --- 1. Black Hole (Lower) ---
+        const bhMesh = new THREE.Mesh(new THREE.SphereGeometry(5, 32, 32), new THREE.MeshBasicMaterial({ color: 0x111111 }));
+        const bhGlow = new THREE.Mesh(new THREE.SphereGeometry(5.2, 32, 32), glowMaterialBH.clone());
+        bhMesh.add(bhGlow);
+        bhMesh.position.set(singularityX, bhBrane.position.y - 10, singularityZ);
+        scene.add(bhMesh);
+
+        // --- 2. White Hole (Upper) ---
+        const whMesh = new THREE.Mesh(new THREE.SphereGeometry(4, 32, 32), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+        const whGlow = new THREE.Mesh(new THREE.SphereGeometry(4.8, 32, 32), glowMaterialBH.clone());
+        whGlow.material.uniforms.color.value.setHex(0x00ffff);
+        whMesh.add(whGlow);
+
+        // Exotic Matter Glow (Green)
+        const exoticGlow = new THREE.Mesh(new THREE.SphereGeometry(5.5, 32, 32), glowMaterialExotic);
+        whMesh.add(exoticGlow);
+
+        whMesh.position.set(singularityX, whBrane.position.y + 10, singularityZ);
+        scene.add(whMesh);
+
+        // --- 3. Wormhole Bridge ---
+        const wormholeGeo = new THREE.CylinderGeometry(2, 2, config.BRANE_Y_SEP + 20, 16, 1, true);
+        const wormholeMat = new THREE.MeshBasicMaterial({
+            color: 0xffaa00,
+            transparent: true,
+            opacity: 0.2,
+            side: THREE.DoubleSide,
+            wireframe: true,
+            blending: THREE.AdditiveBlending
+        });
+        const wormholeMesh = new THREE.Mesh(wormholeGeo, wormholeMat);
+        wormholeMesh.position.y = 0;
+        scene.add(wormholeMesh);
+
+        // --- Light Cones ---
+        const coneGroup = new THREE.Group();
+        scene.add(coneGroup);
+        const coneWrappers = [];
+
+        function initLightCones() {
+            const coneHeight = 3.0, coneRadius = 0.8;
+
+            const bhFutureMat = new THREE.MeshBasicMaterial({ color: 0xffcc00, wireframe: true, transparent: true, opacity: 0.7 });
+            const whFutureMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, wireframe: true, transparent: true, opacity: 0.7 });
+
+            const spacing = 12;
+            for (let x = -100; x <= 100; x += spacing) {
+                for (let z = -60; z <= 60; z += spacing) {
+                    const d = Math.sqrt(x * x + z * z);
+                    if (d < 5) continue;
+
+                    // BH Cone (Lower Brane)
+                    const wrapperBH = new THREE.Group();
+                    const fMeshBH = new THREE.Mesh(new THREE.ConeGeometry(coneRadius, coneHeight, 8, 1, true), bhFutureMat);
+                    fMeshBH.position.y = coneHeight / 2;
+                    wrapperBH.add(fMeshBH);
+                    wrapperBH.position.y = bhBrane.position.y;
+                    wrapperBH.userData = { x: x, z: z, singularity: 'bh' };
+                    coneGroup.add(wrapperBH);
+                    coneWrappers.push(wrapperBH);
+
+                    // WH Cone (Upper Brane)
+                    const wrapperWH = new THREE.Group();
+                    const fMeshWH = new THREE.Mesh(new THREE.ConeGeometry(coneRadius, coneHeight, 8, 1, true), whFutureMat);
+                    fMeshWH.position.y = coneHeight / 2;
+                    wrapperWH.add(fMeshWH);
+                    wrapperWH.position.y = whBrane.position.y;
+                    wrapperWH.userData = { x: x, z: z, singularity: 'wh' };
+                    coneGroup.add(wrapperWH);
+                    coneWrappers.push(wrapperWH);
+                }
+            }
+        }
+        initLightCones();
+
+        // --- 4. Yang-Mills Gauge Field Lines (NEW) ---
+        const gaugeFieldGroup = new THREE.Group();
+        scene.add(gaugeFieldGroup);
+        const gaugeData = [];
+        const gaugeLineMaterial = new THREE.LineBasicMaterial({
+            vertexColors: true,
+            transparent: true,
+            blending: THREE.AdditiveBlending
+        });
+
+        const cRed = new THREE.Color(0xff0000);
+        const cGreen = new THREE.Color(0x00ff00);
+        const cBlue = new THREE.Color(0x0000ff);
+        const colors = [cRed, cGreen, cBlue];
+
+        function initGaugeField() {
+            for (let i = 0; i < config.gaugeFieldCount; i++) {
+                const r = 8 + Math.random() * 15; // Radius around singularity
+                const ang = Math.random() * Math.PI * 2;
+                const baseY = (Math.random() > 0.5 ? 1 : -1) * (config.BRANE_Y_SEP / 2 + 10);
+
+                const geometry = new THREE.BufferGeometry();
+                const positions = new Float32Array(6); // Two vertices (start and end)
+                const lineColors = new Float32Array(6);
+
+                const data = {
+                    r, ang,
+                    baseY,
+                    speed: 0.05 + Math.random() * 0.1,
+                    colorIndex: Math.floor(Math.random() * 3),
+                    length: 1 + Math.random() * 3,
+                    geo: geometry
+                };
+                gaugeData.push(data);
+
+                geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                geometry.setAttribute('color', new THREE.BufferAttribute(lineColors, 3));
+
+                const line = new THREE.Line(geometry, gaugeLineMaterial);
+                gaugeFieldGroup.add(line);
+            }
+        }
+        initGaugeField();
+
+
+        // --- Particles: BH (Spiral IN - Lower) ---
+        const pCount = 3000;
+        const bhGeo = new THREE.BufferGeometry();
+        const bhPosArr = new Float32Array(pCount * 3);
+        const bhColArr = new Float32Array(pCount * 3);
+        const bhData = [];
+
+        const cOrange = new THREE.Color(0xffaa00);
+
+        for (let i = 0; i < pCount; i++) {
+            const r = 6 + Math.random() * 25;
+            const ang = Math.random() * Math.PI * 2;
+            bhData.push({
+                r, ang,
+                speed: 0.02 + Math.random() * 0.02,
+                gaugeCharge: Math.floor(Math.random() * 3) // 0, 1, 2 for R, G, B conceptual charge
+            });
+
+            // Initial color
+            const col = cOrange.clone().lerp(colors[bhData[i].gaugeCharge], 0.1);
+            bhColArr[i * 3] = col.r; bhColArr[i * 3 + 1] = col.g; bhColArr[i * 3 + 2] = col.b;
+        }
+        bhGeo.setAttribute('position', new THREE.BufferAttribute(bhPosArr, 3));
+        bhGeo.setAttribute('color', new THREE.BufferAttribute(bhColArr, 3));
+        const bhParticles = new THREE.Points(bhGeo, new THREE.PointsMaterial({
+            vertexColors: true, size: 0.6, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending
+        }));
+        scene.add(bhParticles);
+
+        // --- Particles: WH (Spiral OUT - Upper) ---
+        const pCount_wh = 3000;
+        const whGeo = new THREE.BufferGeometry();
+        const whPosArr = new Float32Array(pCount_wh * 3);
+        const whColArr = new Float32Array(pCount_wh * 3);
+        const whData = [];
+
+        const cCyan = new THREE.Color(0x00ffff);
+
+        for (let i = 0; i < pCount_wh; i++) {
+            const r = 4 + Math.random();
+            const ang = Math.random() * Math.PI * 2;
+            whData.push({
+                r, ang,
+                speed: 0.02 + Math.random() * 0.02,
+                gaugeCharge: Math.floor(Math.random() * 3) // 0, 1, 2 for R, G, B conceptual charge
+            });
+
+            const col = cCyan.clone().lerp(colors[whData[i].gaugeCharge], 0.1);
+            whColArr[i * 3] = col.r; whColArr[i * 3 + 1] = col.g; whColArr[i * 3 + 2] = col.b;
+        }
+        whGeo.setAttribute('position', new THREE.BufferAttribute(whPosArr, 3));
+        whGeo.setAttribute('color', new THREE.BufferAttribute(whColArr, 3));
+        const whParticles = new THREE.Points(whGeo, new THREE.PointsMaterial({
+            vertexColors: true, size: 0.6, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending
+        }));
+        scene.add(whParticles);
+
+        // --- Particles: Hawking Radiation ---
+        const hCount = 500;
+        const hGeo = new THREE.BufferGeometry();
+        const hPosArr = new Float32Array(hCount * 3);
+        const hData = [];
+
+        for (let i = 0; i < hCount; i++) {
+            const r = 5 + Math.random() * 3;
+            const ang = Math.random() * Math.PI * 2;
+            const speed = 0.05 + Math.random() * 0.05;
+            const velX = Math.cos(ang) * 0.1;
+            const velZ = Math.sin(ang) * 0.1;
+            const velY = 0.3 + Math.random() * 0.3;
+            hData.push({ r, ang, speed, velX, velY, velZ, life: 1.0, maxLife: 1.0 + Math.random() });
+        }
+        hGeo.setAttribute('position', new THREE.BufferAttribute(hPosArr, 3));
+        const hParticles = new THREE.Points(hGeo, new THREE.PointsMaterial({
+            color: 0x88ccff,
+            size: 0.4,
+            transparent: true,
+            opacity: 0.9,
+            blending: THREE.AdditiveBlending
+        }));
+        scene.add(hParticles);
+
+
+        // --- Animation Loop ---
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = Date.now() * 0.001;
+
+            // Update Glow & Spin
+            bhGlow.material.uniforms.time.value = time;
+            whGlow.material.uniforms.time.value = time;
+            exoticGlow.material.uniforms.time.value = time;
+            bhMesh.rotation.y += config.spin;
+            whMesh.rotation.y -= config.spin;
+
+            // Wormhole Pulse
+            if (config.showWormhole) {
+                wormholeMesh.visible = true;
+                const pulseScale = 1.0 + Math.sin(time * 3) * 0.1;
+                wormholeMesh.scale.x = pulseScale;
+                wormholeMesh.scale.z = pulseScale;
+                wormholeMesh.material.opacity = 0.2 + Math.abs(Math.sin(time * 2)) * 0.1;
+            } else {
+                wormholeMesh.visible = false;
+            }
+
+
+            // 1. Update Branes (Gravity & Gravitational Waves)
+            const bhPositions = bhBrane.geometry.attributes.position;
+            const whPositions = whBrane.geometry.attributes.position;
+            const bhBraneBaseY = bhBrane.position.y;
+            const whBraneBaseY = whBrane.position.y;
+
+            for (let i = 0; i < bhPositions.count; i++) {
+                const x = bhOriginalPositions[i * 3];
+                const y_geo = bhOriginalPositions[i * 3 + 1];
+                const z_world = -y_geo;
+
+                let depth = getBHDepth(x, z_world);
+                depth += Math.sin(Math.sqrt(x * x + z_world * z_world) * 0.3 - time * 2) * 0.3; // Radial ripple
+                depth += Math.sin(z_world * 0.1 + time * config.waveSpeed * 0.2) * config.waveAmplitude * 0.5; // Gravitational wave
+                bhPositions.setZ(i, depth);
+
+                let height = getWHHeight(x, z_world);
+                height += Math.sin(Math.sqrt(x * x + z_world * z_world) * 0.3 - time * 2) * 0.3; // Radial ripple
+                height += Math.sin(z_world * 0.1 + time * config.waveSpeed * 0.2) * config.waveAmplitude * 0.5; // Gravitational wave
+                whPositions.setZ(i, height);
+            }
+            bhPositions.needsUpdate = true;
+            whPositions.needsUpdate = true;
+
+
+            // 2. Update Gauge Field (Yang-Mills)
+            gaugeFieldGroup.visible = config.yangMillsStrength > 0.01;
+            gaugeFieldGroup.children.forEach((line, i) => {
+                const d = gaugeData[i];
+                const positions = d.geo.attributes.position;
+                const colorsArr = d.geo.attributes.color;
+
+                d.ang += d.speed * config.yangMillsStrength * 0.5;
+
+                const radius = d.r + Math.sin(d.ang * 2 + time * 3) * 0.5;
+                const px = singularityX + radius * Math.cos(d.ang);
+                const pz = singularityZ + radius * Math.sin(d.ang);
+
+                let py = d.baseY;
+                if (d.baseY < 0) { // BH side
+                    py += getBHDepth(px, pz);
+                } else { // WH side
+                    py += getWHHeight(px, pz);
+                }
+
+                // Field line visualization (dynamic orientation)
+                const startX = px;
+                const startY = py + Math.sin(d.ang * 5) * d.length * 0.5;
+                const startZ = pz;
+
+                const endX = px + Math.sin(time + d.r) * d.length * 0.1;
+                const endY = py + Math.cos(d.ang * 7) * d.length * 0.5;
+                const endZ = pz;
+
+                positions.setXYZ(0, startX, startY, startZ);
+                positions.setXYZ(1, endX, endY, endZ);
+
+                // Color cycling for non-Abelian nature (QCD concept)
+                const color = colors[d.colorIndex];
+                colorsArr.setXYZ(0, color.r, color.g, color.b);
+                colorsArr.setXYZ(1, color.r, color.g, color.b);
+
+                d.geo.attributes.position.needsUpdate = true;
+                d.geo.attributes.color.needsUpdate = true;
+
+                // Opacity based on strength
+                line.material.opacity = config.yangMillsStrength * 0.5;
+            });
+
+
+            // 3. Update BH Particles (Gravity & Gauge Interaction)
+            const posBH = bhGeo.attributes.position;
+            const colBH = bhGeo.attributes.color;
+            for (let i = 0; i < pCount; i++) {
+                const d = bhData[i];
+                d.ang += d.speed;
+                d.r -= 0.05;
+                if (d.r < 4) { d.r = 25 + Math.random() * 5; }
+
+                const px = singularityX + d.r * Math.cos(d.ang);
+                const pz = singularityZ + d.r * Math.sin(d.ang);
+                const py = bhBraneBaseY + getBHDepth(px, pz) + Math.sin(d.ang * 3 + time) * 0.5;
+                posBH.setXYZ(i, px, py, pz);
+
+                // Gauge Interaction: Change conceptual charge (color) near the field
+                if (d.r < 25 && Math.random() < config.yangMillsStrength * 0.1) {
+                    d.gaugeCharge = (d.gaugeCharge + 1) % 3; // Cycle charge R -> G -> B
+                }
+                const newColor = cOrange.clone().lerp(colors[d.gaugeCharge], config.yangMillsStrength * 0.5 + 0.1);
+                colBH.setXYZ(i, newColor.r, newColor.g, newColor.b);
+            }
+            posBH.needsUpdate = true;
+            colBH.needsUpdate = true;
+
+            // 4. Update WH Particles (Gravity & Gauge Interaction)
+            const posWH = whGeo.attributes.position;
+            const colWH = whGeo.attributes.color;
+            for (let i = 0; i < pCount_wh; i++) {
+                const d = whData[i];
+                d.ang += d.speed;
+                d.r += 0.08;
+                if (d.r > 35) { d.r = 4 + Math.random(); }
+
+                const px = singularityX + d.r * Math.cos(d.ang);
+                const pz = singularityZ + d.r * Math.sin(d.ang);
+                const py = whBraneBaseY + getWHHeight(px, pz) + Math.sin(d.ang * 3 + time) * 0.5;
+                posWH.setXYZ(i, px, py, pz);
+
+                // Gauge Interaction: Change conceptual charge (color) near the field
+                if (d.r < 25 && Math.random() < config.yangMillsStrength * 0.1) {
+                    d.gaugeCharge = (d.gaugeCharge + 1) % 3; // Cycle charge
+                }
+                const alpha = Math.max(0, (35 - d.r) / 30);
+                const newColor = cCyan.clone().lerp(colors[d.gaugeCharge], config.yangMillsStrength * 0.5 + 0.1).multiplyScalar(alpha);
+                colWH.setXYZ(i, newColor.r, newColor.g, newColor.b);
+            }
+            posWH.needsUpdate = true;
+            colWH.needsUpdate = true;
+
+
+            // 5. Update Hawking Radiation Particles
+            const posH = hGeo.attributes.position;
+            const bhSingularityY = bhMesh.position.y;
+
+            for (let i = 0; i < hCount; i++) {
+                const d = hData[i];
+                if (d.life <= 0) {
+                    d.r = 5 + Math.random() * 3;
+                    d.ang = Math.random() * Math.PI * 2;
+                    d.life = d.maxLife;
+                    d.maxLife = 1.0 + Math.random();
+                    d.velY = 0.3 + Math.random() * 0.3;
+                    d.velX = Math.cos(d.ang) * 0.1;
+                    d.velZ = Math.sin(d.ang) * 0.1;
+
+                    const px = singularityX + d.r * Math.cos(d.ang);
+                    const pz = singularityZ + d.r * Math.sin(d.ang);
+                    posH.setXYZ(i, px, bhSingularityY, pz);
+
+                } else if (config.hawkingRadiation > 0.01) {
+                    let currentX = posH.getX(i);
+                    let currentY = posH.getY(i);
+                    let currentZ = posH.getZ(i);
+
+                    currentX += d.velX * config.hawkingRadiation;
+                    currentY += d.velY * config.hawkingRadiation;
+                    currentZ += d.velZ * config.hawkingRadiation;
+
+                    hParticles.material.opacity = Math.min(0.9, config.hawkingRadiation);
+
+                    d.velX *= 0.995;
+                    d.velZ *= 0.995;
+                    d.velY -= 0.005;
+
+                    posH.setXYZ(i, currentX, currentY, currentZ);
+                    d.life -= 0.01;
+                } else {
+                    posH.setXYZ(i, 0, -200, 0);
+                }
+            }
+            posH.needsUpdate = true;
+            hParticles.visible = config.hawkingRadiation > 0.01;
+
+            // 6. Update Light Cones (Same logic, uses updated positions)
+            if (config.lightCones) {
+                coneGroup.visible = true;
+                coneWrappers.forEach(wrapper => {
+                    const cx = wrapper.userData.x;
+                    const cz = wrapper.userData.z;
+                    const singularity = wrapper.userData.singularity;
+
+                    let y, tiltStrength;
+                    const dSingularity = Math.sqrt(cx * cx + cz * cz);
+                    tiltStrength = 60 / (dSingularity + 1);
+
+                    const gravityModifier = (singularity === 'bh') ? getBHDepth(cx, cz) : getWHHeight(cx, cz);
+                    const waveModifier = Math.sin(cz * 0.1 + time * config.waveSpeed * 0.2) * config.waveAmplitude * 0.5;
+
+                    y = (singularity === 'bh' ? bhBraneBaseY : whBraneBaseY) + gravityModifier + waveModifier;
+
+                    wrapper.position.set(cx, y, cz);
+
+                    // Cones tilt towards/away from singularity
+                    wrapper.rotation.set(0, 0, 0);
+                    const tiltFactor = Math.min(tiltStrength * 0.08, 2.0);
+
+                    const targetX = (singularity === 'bh') ? -cx : cx;
+                    const targetZ = (singularity === 'bh') ? -cz : cz;
+                    const len = Math.sqrt(targetX * targetX + targetZ * targetZ);
+                    const normX = targetX / (len || 1);
+                    const normZ = targetZ / (len || 1);
+
+                    const fy = (singularity === 'bh') ? -1.0 : 1.0;
+                    const fx = normX * tiltFactor;
+                    const fz = normZ * tiltFactor;
+
+                    const vUp = new THREE.Vector3(0, 1, 0);
+                    const vTarget = new THREE.Vector3(fx, fy, fz).normalize();
+                    const quaternion = new THREE.Quaternion();
+                    quaternion.setFromUnitVectors(vUp, vTarget);
+                    wrapper.setRotationFromQuaternion(quaternion);
+                });
+            } else {
+                coneGroup.visible = false;
+            }
+
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // --- GUI ---
+        const gui = new dat.GUI({ width: 300 });
+        const systemFolder = gui.addFolder('时空核心控制 (Core Control)');
+        systemFolder.add(config, 'mass', 10, 80).name('引力奇点强度/曲率');
+        systemFolder.add(config, 'spin', 0, 0.1).name('奇点自旋速度');
+        systemFolder.add(config, 'BRANE_Y_SEP', 10, 50).step(5).name('时空层间距').onChange(v => {
+            bhBrane.position.y = -v / 2;
+            whBrane.position.y = v / 2;
+            pointLightBH.position.y = bhBrane.position.y + 10;
+            pointLightWH.position.y = whBrane.position.y + 10;
+            camera.position.y = v + 40;
+            camera.lookAt(0, 0, 0);
+            bhMesh.position.y = bhBrane.position.y - 10;
+            whMesh.position.y = whBrane.position.y + 10;
+
+            wormholeMesh.geometry.dispose();
+            wormholeMesh.geometry = new THREE.CylinderGeometry(2, 2, v + 20, 16, 1, true);
+        });
+        systemFolder.add(config, 'showWormhole').name('概念虫洞 (Wormhole)');
+        systemFolder.open();
+
+        const forceFolder = gui.addFolder('基本力场 (Fundamental Forces)');
+        forceFolder.add(config, 'yangMillsStrength', 0.0, 1.0).name('杨-米尔斯场强度');
+        forceFolder.add(config, 'waveAmplitude', 0.0, 5.0).name('引力波振幅');
+        forceFolder.add(config, 'waveSpeed', 1.0, 10.0).name('引力波速度');
+        forceFolder.add(config, 'hawkingRadiation', 0.0, 1.0).name('霍金辐射强度');
+        forceFolder.open();
+
+        const displayFolder = gui.addFolder('显示选项 (Display)');
+        displayFolder.add(config, 'lightCones').name('显示因果光锥');
+
+
+        document.getElementById('loading').style.opacity = 0;
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+
+</html>
